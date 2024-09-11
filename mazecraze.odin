@@ -42,6 +42,7 @@ Passage :: bit_set[Direction]
 
 
 Player :: struct {
+    input: User_Input,
     coord: rl.Vector2,
     prevCoord: rl.Vector2,
     position: rl.Vector2,
@@ -180,7 +181,7 @@ User_Input :: struct {
     reset: bool,
 }
 
-process_user_input :: proc(user_input: ^User_Input) {
+process_user_input1 :: proc(user_input: ^User_Input) {
     user_input^ = User_Input {
         up          = rl.IsKeyPressed(.UP),
         down        = rl.IsKeyPressed(.DOWN),
@@ -192,6 +193,21 @@ process_user_input :: proc(user_input: ^User_Input) {
         rightHeld   = rl.IsKeyDown(.RIGHT),
 
         reset       = rl.IsKeyPressed(.SPACE),
+    }
+}
+
+process_user_input2 :: proc(user_input: ^User_Input) {
+    user_input^ = User_Input {
+        up          = rl.IsKeyPressed(.W),
+        down        = rl.IsKeyPressed(.S),
+        left        = rl.IsKeyPressed(.A),
+        right       = rl.IsKeyPressed(.D),
+        upHeld      = rl.IsKeyDown(.W),
+        downHeld    = rl.IsKeyDown(.S),
+        leftHeld    = rl.IsKeyDown(.A),
+        rightHeld   = rl.IsKeyDown(.D),
+
+        // reset       = rl.IsKeyPressed(.SPACE),
     }
 }
 
@@ -207,14 +223,18 @@ get_passages :: proc(x: i32, y: i32, world: World) -> Passage {
 
 Clip :: enum {
     tap,
+    tap2,
     wall,
     wall2,
 }
 
 
+MAZE_WIDTH :: 19
+MAZE_HEIGHT :: 12
+
 
 main :: proc() {
-    window := Window{"hyperdongon", 1024, 768, 60, rl.ConfigFlags{ }}
+    window := Window{"hyperdongon", 1280, 768, 60, rl.ConfigFlags{ }}
 
     rl.ChangeDirectory(rl.GetApplicationDirectory())
     rl.InitWindow(window.width, window.height, window.name)
@@ -226,16 +246,17 @@ main :: proc() {
 
     Sounds : [Clip]rl.Sound = {
         .tap = rl.LoadSound("./tap.wav"),
+        .tap2 = rl.LoadSound("./tap2.wav"),
         .wall = rl.LoadSound("./wall.wav"),
         .wall2 = rl.LoadSound("./wall2.wav"),
     }
 
 
-    user_input : User_Input
+    // user_input : User_Input
 
 
 
-    world := make_world(14, 11, 2)
+    world := make_world(MAZE_WIDTH, MAZE_HEIGHT, 2)
 
     bgColor := rl.GetColor(0x3F3464FF)
     passageColor := rl.GetColor(0xB2684Aff)
@@ -251,19 +272,27 @@ main :: proc() {
 
     for !rl.WindowShouldClose() {
 
-        process_user_input(&user_input) 
+        process_user_input1(&world.players[0].input)
+        process_user_input2(&world.players[1].input)
 
-        if user_input.reset {
-            world = make_world(14, 11, 2)
+        if world.players[0].input.reset {
+            world = make_world(MAZE_WIDTH, MAZE_HEIGHT, 2)
         }
 
 
         elapsed := rl.GetFrameTime()
 
-        step, wall := update_player(&world.players[0], elapsed, user_input, world)
+        step, wall := update_player(&world.players[0], elapsed, world)
         if step {
             rl.PlaySound(Sounds[.tap])
         } else if wall {
+            rl.PlaySound(Sounds[.wall])
+        }
+
+        step2, wall2 := update_player(&world.players[1], elapsed, world)
+        if step2 {
+            rl.PlaySound(Sounds[.tap2])
+        } else if wall2 {
             rl.PlaySound(Sounds[.wall])
         }
 

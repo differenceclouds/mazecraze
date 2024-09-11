@@ -14,7 +14,7 @@ PlayerColors : []rl.Color = {
 TICK_RATE: f32: 0.1
 
 
-update_player :: proc(player: ^Player, elapsed: f32, input: User_Input, world: World) -> (bool, bool) {
+update_player :: proc(player: ^Player, elapsed: f32, world: World) -> (bool, bool) {
     using player
     // move_timer += elapsed
 
