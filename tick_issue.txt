@@ -1,0 +1,27 @@
+
+
+
+. = frame
+___| = counting + tick
+--- = input duration
+^ = actual move duration
+what I have:
+........................................
+___|___|___|___|___|___|___|___|___|___|
+ ---    -------      - -     ---    ---
+   ^^^^    ^^^^^       ^^^^    ^^^^
+
+ticks happen regardless, inputs can be missed or carried over unexpectedly
+
+
+
+
+what I want:
+|___ tick + counting
+
+........................................
+ |___   |___|___     |___    |___   |___
+ ---    -------      - -     ---    ---
+ ^^^^   ^^^^^^^^     ^^^^    ^^^^   ^^^^
+
+ move duration is constant, but can start at any point as long as a tick is not counting
