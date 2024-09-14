@@ -1,0 +1,23 @@
+#
+# rgl layout text file (v4.0) - raygui layout file generated using rGuiLayout
+#
+# Number of controls:     12
+#
+# Ref. window:    r <x> <y> <width> <height>
+# Anchor info:    a <id> <name> <posx> <posy> <enabled>
+# Control info:   c <id> <type> <name> <rectangle> <anchor_id> <text>
+#
+r 0 40 -1 -1
+a 002 anchor02 0 0 1
+c 000 0 WindowBox000 0 0 312 216 2 player setup
+c 001 15 Spinner001 24 176 120 24 2 
+c 002 22 ColorPicker002 24 48 96 96 2 
+c 003 22 ColorPicker003 168 48 96 96 2 
+c 004 15 Spinner002 168 176 120 24 2 
+c 005 4 Label005 24 152 72 24 2 SPEED
+c 006 6 LabelButton006 168 152 120 24 2 SPEED
+c 007 6 LabelButton007 24 24 120 24 2 COLOR
+c 008 6 LabelButton008 168 24 120 24 2 COLOR
+c 009 16 Slider009 568 360 256 16 0 RED
+c 010 16 Slider010 576 392 240 16 0 
+c 011 16 Slider011 576 416 120 16 0 

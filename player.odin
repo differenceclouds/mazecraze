@@ -14,7 +14,7 @@ PlayerColors : []rl.Color = {
     rl.YELLOW
 }
 
-TICK_RATE: f32: 0.15
+TICK_RATE: f32: 0.5
 
 
 process_user_input_global :: proc(user_input: ^User_Input) {
@@ -27,20 +27,6 @@ process_user_input_global :: proc(user_input: ^User_Input) {
 
 process_user_input1 :: proc(user_input: ^User_Input) {
     user_input^ = User_Input {
-        up_pressed          = rl.IsKeyPressed(.UP),
-        down_pressed        = rl.IsKeyPressed(.DOWN),
-        left_pressed        = rl.IsKeyPressed(.LEFT),
-        right_pressed       = rl.IsKeyPressed(.RIGHT),
-        up_held             = rl.IsKeyDown(.UP),
-        down_held           = rl.IsKeyDown(.DOWN),
-        left_held           = rl.IsKeyDown(.LEFT),
-        right_held          = rl.IsKeyDown(.RIGHT),
-        // reset       = rl.IsKeyPressed(.SPACE),
-    }
-}
-
-process_user_input2 :: proc(user_input: ^User_Input) {
-    user_input^ = User_Input {
         up_pressed          = rl.IsKeyPressed(.W),
         down_pressed        = rl.IsKeyPressed(.S),
         left_pressed        = rl.IsKeyPressed(.A),
@@ -49,9 +35,23 @@ process_user_input2 :: proc(user_input: ^User_Input) {
         down_held           = rl.IsKeyDown(.S),
         left_held           = rl.IsKeyDown(.A),
         right_held          = rl.IsKeyDown(.D),
-        // reset       = rl.IsKeyPressed(.SPACE),
     }
 }
+
+process_user_input2 :: proc(user_input: ^User_Input) {
+    user_input^ = User_Input {
+        up_pressed          = rl.IsKeyPressed(.UP),
+        down_pressed        = rl.IsKeyPressed(.DOWN),
+        left_pressed        = rl.IsKeyPressed(.LEFT),
+        right_pressed       = rl.IsKeyPressed(.RIGHT),
+        up_held             = rl.IsKeyDown(.UP),
+        down_held           = rl.IsKeyDown(.DOWN),
+        left_held           = rl.IsKeyDown(.LEFT),
+        right_held          = rl.IsKeyDown(.RIGHT),
+    }
+}
+
+
 
 get_passages :: proc(x: i32, y: i32, world: World) -> Passage {
     if x < 0 || x >= world.width || y < 0 || y >= world.height {

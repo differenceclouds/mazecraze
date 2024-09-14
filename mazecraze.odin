@@ -8,6 +8,7 @@ import "core:fmt"
 import "core:math/rand"
 import "core:strings"
 import "core:strconv"
+import "core:time"
 import rl "vendor:raylib"
 
 
@@ -256,7 +257,9 @@ run_game :: proc(tracking_allocator : mem.Tracking_Allocator) {
     rl.InitWindow(window.width, window.height, window.name)
     rl.SetWindowState( window.control_flags )
     rl.SetTargetFPS(window.fps)
-    rl.GuiLoadStyle("style_sunny.rgs")
+    rl.GuiLoadStyle("./rgui/style_jungle.old.rgs")
+
+    gui_data := InitGui()
 
     rl.InitAudioDevice()
 
@@ -293,7 +296,7 @@ run_game :: proc(tracking_allocator : mem.Tracking_Allocator) {
     }
 
     tilemap : Tilemap = {
-        rl.LoadTexture("./tilemap_trench_layers.png"),
+        rl.LoadTexture("./tilemap_trench_layers_offset.png"),
         make(map[Passage]rl.Rectangle)
     }
 
@@ -330,19 +333,19 @@ run_game :: proc(tracking_allocator : mem.Tracking_Allocator) {
     for &player, i in players {
         using player
         color = PlayerColors[i % len(PlayerColors)]
-        speed = 1
+        speed = 3
         win_message = "0"
     }
 
 
-    gen_options : GenerationOptions = {.5}
+    maze_options : GenerationOptions = {.5}
 
     world := World {
         width = MAZE_WIDTH,
         height = MAZE_HEIGHT,
         tiles = make([]Passage, MAZE_WIDTH * MAZE_HEIGHT)
     }
-    make_world(&world, MAZE_WIDTH, MAZE_HEIGHT, MAZE_MARGIN, &players, gen_options)
+    make_world(&world, MAZE_WIDTH, MAZE_HEIGHT, MAZE_MARGIN, &players, maze_options)
     defer delete(world.tiles)
 
 
@@ -354,7 +357,7 @@ run_game :: proc(tracking_allocator : mem.Tracking_Allocator) {
 
 
         if global_input.reset {
-            make_world(&world, MAZE_WIDTH, MAZE_HEIGHT, MAZE_MARGIN, &players, gen_options)
+            make_world(&world, MAZE_WIDTH, MAZE_HEIGHT, MAZE_MARGIN, &players, maze_options)
         }
         if global_input.next_draw_style {
             s := int(Style)
@@ -388,22 +391,6 @@ run_game :: proc(tracking_allocator : mem.Tracking_Allocator) {
             using tileProps       
 
             rl.ClearBackground(ground_color)
-
-
-            // for player in players {
-            //     switch Style {
-            //         case .Atari: 
-            //             rect: rl.Rectangle = {
-            //                 player.position.x * width + pad,
-            //                 player.position.y * height + pad,
-            //                 inner_width,
-            //                 inner_height,
-            //             }
-            //             rl.DrawRectangleRec(rect, player.color)
-            //         case .Grayblocks: 
-            //             rl.DrawTextureV(cube, {player.position.x * width, player.position.y * width}, player.color)
-            //     }
-            // }
 
             rl.DrawText("G\n\n\n\nO\n\n\n\nA\n\n\n\nL\n\n\n\n", world.width * i32(width) + 48, 250, 64, rl.RAYWHITE)
 
@@ -466,13 +453,19 @@ run_game :: proc(tracking_allocator : mem.Tracking_Allocator) {
                 case .Grayblocks: {
                     y : f32 = 0
                     x : f32 = 0
+                    xo : f32 = 8
                     //Draw walls of maze
                     for tile, i in world.tiles {
                         p := get_passages(i32(x), i32(y), world)
 
                         rect := tilemap.order[p]
+
+                        rect.y += 256
+                        rl.DrawTextureRec(tilemap.texture, rect, {x * width + xo, y * height}, rl.WHITE)
+
+                        rect.y -= 256
                         rect.x += 256
-                        rl.DrawTextureRec(tilemap.texture, rect, {x * width, y * height}, rl.WHITE)
+                        rl.DrawTextureRec(tilemap.texture, rect, {x * width + xo, y * height}, rl.WHITE)
                         if x == f32(world.width - 1) {
                             rect: rl.Rectangle = {0, 128, 32, 64}
 
@@ -481,7 +474,7 @@ run_game :: proc(tracking_allocator : mem.Tracking_Allocator) {
                             } 
                             rect.x += 256
 
-                            rl.DrawTextureRec(tilemap.texture, rect, {(x + 1) * width, y * height}, rl.WHITE)                                
+                            rl.DrawTextureRec(tilemap.texture, rect, {(x + 1) * width + xo, y * height}, rl.WHITE)                                
                         }
                         x += 1
                         if x == f32(world.width) {
@@ -489,6 +482,8 @@ run_game :: proc(tracking_allocator : mem.Tracking_Allocator) {
                             y += 1
                         }
                     }
+
+                    rl.DrawRectangleRec({0,0, 8, f32(window.height)}, rl.GetColor(0x91929bff))
 
                     //Draw players
                     for player in players {
@@ -500,13 +495,13 @@ run_game :: proc(tracking_allocator : mem.Tracking_Allocator) {
                         if player.do_move && (player.coord.x < world.exit.x || player.prevCoord.x < world.exit.x) {
                             switch player.current_direction {
                                 case .North:
-                                    rl.DrawTextureRec(tilemap.texture, {352, 96, 32, 32}, player.coord * width + 32, rl.WHITE)
+                                    rl.DrawTextureRec(tilemap.texture, {352, 96, 32, 32}, player.coord * width + {32 + xo,32}, rl.WHITE)
                                 case .South:
-                                    rl.DrawTextureRec(tilemap.texture, {352, 96, 32, 32}, player.prevCoord * width + 32, rl.WHITE)
+                                    rl.DrawTextureRec(tilemap.texture, {352, 96, 32, 32}, player.prevCoord * width + {32 + xo,32}, rl.WHITE)
                                 case .East:
-                                    rl.DrawTextureRec(tilemap.texture, {384, 128, 32, 32}, player.coord * width, rl.WHITE)
+                                    rl.DrawTextureRec(tilemap.texture, {384, 128, 32, 32}, player.coord * width + {xo,0}, rl.WHITE)
                                 case .West:
-                                    rl.DrawTextureRec(tilemap.texture, {384, 128, 32, 32}, player.prevCoord * width, rl.WHITE)
+                                    rl.DrawTextureRec(tilemap.texture, {384, 128, 32, 32}, player.prevCoord * width + {xo,0}, rl.WHITE)
 
                             }
                         }
@@ -519,13 +514,13 @@ run_game :: proc(tracking_allocator : mem.Tracking_Allocator) {
                     //Draw top of maze
                     for tile, i in world.tiles {
                         p := get_passages(i32(x), i32(y), world)
-                        rl.DrawTextureRec(tilemap.texture, tilemap.order[p], {x * width, y * height}, rl.WHITE)
+                        rl.DrawTextureRec(tilemap.texture, tilemap.order[p], {x * width + xo, y * height}, rl.WHITE)
                         if x == f32(world.width - 1) {
                             rect: rl.Rectangle = {0, 128, 32, 64}
                             if Direction.East in p {
                                 rect.x = 128
                             } 
-                            rl.DrawTextureRec(tilemap.texture, rect, {(x + 1) * width, y * height}, rl.WHITE)                                
+                            rl.DrawTextureRec(tilemap.texture, rect, {(x + 1) * width + xo, y * height}, rl.WHITE)                                
                         }
 
                         if DRAW_GRID {
@@ -558,9 +553,9 @@ run_game :: proc(tracking_allocator : mem.Tracking_Allocator) {
             }
 
 
+            UpdateGui(&window, &gui_data, &players, &maze_options, &global_input)
 
-
-
+            rl.DrawFPS(8, 8)
         }
         rl.EndDrawing()
 
