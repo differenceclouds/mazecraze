@@ -2,6 +2,7 @@ package mazecraze
 
 import "core:log"
 import "core:mem"
+
 import "core:c/libc"
 
 import "core:fmt"
@@ -20,12 +21,13 @@ Window :: struct {
     control_flags: rl.ConfigFlags,
 }
 
-DEBUG_MEM :: true
+DEBUG_MEM :: false
+DRAW_FPS :: false 
 TW :: 64
 MAZE_WIDTH :: 18
 MAZE_HEIGHT :: 12
 MAZE_MARGIN :: 8
-DRAW_GRID :: false
+DRAW_GRID :: true
 
 World :: struct {
     width:   i32,
@@ -34,6 +36,12 @@ World :: struct {
     tiles:   []Passage,
     exit: rl.Vector2,
     someone_has_won: bool
+}
+
+Tilemap :: struct {
+    texture: rl.Texture2D,
+    order: map[Passage]rl.Rectangle,
+    cube: rl.Rectangle
 }
 
 TileProps :: struct {
@@ -56,24 +64,6 @@ Direction :: enum {
 }
 
 Passage :: bit_set[Direction]
-
-
-Player :: struct {
-    input: User_Input,
-    coord: rl.Vector2,
-    prevCoord: rl.Vector2,
-    position: rl.Vector2,
-    color: rl.Color,
-    speed: f32,
-    move_timer: f32,
-    up, down, left, right: bool,
-    current_direction: Direction,
-    do_move: bool,
-    bumped: bool,
-    number_of_wins: int,
-    win_message: cstring,
-}
-
 
 
 
@@ -208,10 +198,7 @@ User_Input :: struct {
     prev_draw_style: bool
 }
 
-Tilemap :: struct {
-    texture: rl.Texture2D,
-    order: map[Passage]rl.Rectangle
-}
+
 
 
 Clip :: enum {
@@ -251,7 +238,7 @@ get_passage_rect :: proc(tileProps: TileProps, dir: Direction) -> rl.Rectangle {
 
 run_game :: proc(tracking_allocator : mem.Tracking_Allocator) {
 
-    window := Window{"it's the maze-craze", 1280, 768, 60, rl.ConfigFlags{ }}
+    window := Window{"it's the maze-craze", 1280, 768, 60, rl.ConfigFlags{}}
 
     rl.ChangeDirectory(rl.GetApplicationDirectory())
     rl.InitWindow(window.width, window.height, window.name)
@@ -267,10 +254,10 @@ run_game :: proc(tracking_allocator : mem.Tracking_Allocator) {
 
 
     sounds : [Clip]rl.Sound = {
-        .tap = rl.LoadSound("./tap.wav"),
-        .tap2 = rl.LoadSound("./tap2.wav"),
-        .wall = rl.LoadSound("./wall.wav"),
-        .wall2 = rl.LoadSound("./wall2.wav"),
+        .tap = rl.LoadSound("./sounds/tap.wav"),
+        .tap2 = rl.LoadSound("./sounds/tap2.wav"),
+        .wall = rl.LoadSound("./sounds/wall.wav"),
+        .wall2 = rl.LoadSound("./sounds/wall2.wav"),
     }
 
 
@@ -294,13 +281,19 @@ run_game :: proc(tracking_allocator : mem.Tracking_Allocator) {
             rl.DARKGREEN
         }
     }
+    tileProps := tilePropsList[Style]
+
+    multisheet := rl.LoadTexture("./multisheet.png")
+
+    lasertexture := rl.LoadTexture("./laser.png")
 
     tilemap : Tilemap = {
-        rl.LoadTexture("./tilemap_trench_layers_offset.png"),
-        make(map[Passage]rl.Rectangle)
+        multisheet,
+        make(map[Passage]rl.Rectangle),
+        {0,256,64,64}
     }
 
-    cube := rl.LoadTexture("./cube.png")
+    // cube := rl.LoadTexture("./cube.png")
 
     defer delete(tilemap.order)
     tilemap.order[{}] =             {0,0,64,64}
@@ -349,6 +342,12 @@ run_game :: proc(tracking_allocator : mem.Tracking_Allocator) {
     defer delete(world.tiles)
 
 
+    laser1: Laser = {
+        position = {f32(world.width), 1},
+        direction = .West,
+        beams = make([]Beam, 8)
+    }
+
 
     for !rl.WindowShouldClose() {
         process_user_input_global(&global_input)
@@ -362,10 +361,11 @@ run_game :: proc(tracking_allocator : mem.Tracking_Allocator) {
         if global_input.next_draw_style {
             s := int(Style)
             Style = DrawStyle((s + 1) %% len(DrawStyle))
-        }
-        if global_input.prev_draw_style {
+            tileProps = tilePropsList[Style]
+        } else if global_input.prev_draw_style {
             s := int(Style)
             Style = DrawStyle((s - 1) %% len(DrawStyle))
+            tileProps = tilePropsList[Style]
         }
 
 
@@ -382,12 +382,12 @@ run_game :: proc(tracking_allocator : mem.Tracking_Allocator) {
         if step2 {
             rl.PlaySound(sounds[.tap2])
         } else if wall2 {
-            // rl.PlaySound(sounds[.wall])
+            rl.PlaySound(sounds[.wall])
         }
 
         rl.BeginDrawing() 
         {
-            tileProps := tilePropsList[Style]
+            // tileProps := tilePropsList[Style]
             using tileProps       
 
             rl.ClearBackground(ground_color)
@@ -448,23 +448,30 @@ run_game :: proc(tracking_allocator : mem.Tracking_Allocator) {
                             inner_height,
                         }
                         rl.DrawRectangleRec(rect, player.color)
+                        // for n:f32 = 1; n <= f32(player.number_of_wins); n += 1 {
+                        //     rect.x += -n * 7
+                        //     rect.y += n * y
+                        //     rl.DrawRectangleRec(rect , player.color)
+                        // }
                     }
+
                 }
                 case .Grayblocks: {
                     y : f32 = 0
                     x : f32 = 0
                     xo : f32 = 8
-                    //Draw walls of maze
+                    
                     for tile, i in world.tiles {
                         p := get_passages(i32(x), i32(y), world)
 
                         rect := tilemap.order[p]
 
-                        rect.y += 256
-                        rl.DrawTextureRec(tilemap.texture, rect, {x * width + xo, y * height}, rl.WHITE)
+                        //Draw Shadows
+                        rect.x += 512
+                        rl.DrawTextureRec(tilemap.texture, rect, {x * width + xo, y * height}, {0,0,0,64})
 
-                        rect.y -= 256
-                        rect.x += 256
+                        //Draw Walls
+                        rect.x -= 256
                         rl.DrawTextureRec(tilemap.texture, rect, {x * width + xo, y * height}, rl.WHITE)
                         if x == f32(world.width - 1) {
                             rect: rl.Rectangle = {0, 128, 32, 64}
@@ -487,9 +494,9 @@ run_game :: proc(tracking_allocator : mem.Tracking_Allocator) {
 
                     //Draw players
                     for player in players {
-                        rect : rl.Rectangle = {0,0,64,64}
+                        // rect : rl.Rectangle = {0,0,64,64}
                         position: rl.Vector2 = {player.position.x * width, player.position.y * height}
-                        rl.DrawTextureRec(cube, rect, position, player.color)
+                        rl.DrawTextureRec(tilemap.texture, tilemap.cube, position, player.color)
 
                         //Draw sliver of wall over players
                         if player.do_move && (player.coord.x < world.exit.x || player.prevCoord.x < world.exit.x) {
@@ -539,23 +546,19 @@ run_game :: proc(tracking_allocator : mem.Tracking_Allocator) {
                         rect : rl.Rectangle = {0,0,64,64}
                         position: rl.Vector2 = {player.position.x * width, player.position.y * height}
                         for n:f32 = 1; n <= f32(player.number_of_wins); n += 1 {
-                            rl.DrawTextureRec(cube, rect, position + {-n * 7, n * 7}, player.color)
+                            rl.DrawTextureRec(tilemap.texture, tilemap.cube, position + {-n * 7, n * 7}, player.color)
                         }
-
                     }
 
-                    // for player in players {
-                    //     rect : rl.Rectangle = {18,18,28,28}
-                    //     position: rl.Vector2 = {player.position.x * width + 18, player.position.y * width + 18}
-                    //     rl.DrawTextureRec(cube, rect, position, player.color)
-                    // }
+                    UpdateLaser(lasertexture, &laser1, players)
                 }
             }
 
-
             UpdateGui(&window, &gui_data, &players, &maze_options, &global_input)
 
-            rl.DrawFPS(8, 8)
+            when DRAW_FPS {            
+                rl.DrawFPS(8, 8)
+            }
         }
         rl.EndDrawing()
 
@@ -572,8 +575,6 @@ run_game :: proc(tracking_allocator : mem.Tracking_Allocator) {
 
     }
 }
-
-
 
 
 main :: proc() {
@@ -604,8 +605,6 @@ main :: proc() {
         }
     }
     mem.tracking_allocator_destroy(&tracking_allocator)
-
-
 }
 
 

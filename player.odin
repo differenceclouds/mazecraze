@@ -6,6 +6,22 @@ import math "core:math"
 import "core:strings"
 import "core:strconv"
 
+Player :: struct {
+    input: User_Input,
+    coord: rl.Vector2,
+    prevCoord: rl.Vector2,
+    position: rl.Vector2,
+    color: rl.Color,
+    speed: f32,
+    move_timer: f32,
+    up, down, left, right: bool,
+    current_direction: Direction,
+    do_move: bool,
+    bumped: bool,
+    number_of_wins: int,
+    win_message: cstring,
+}
+
 PlayerColors : []rl.Color = {
     rl.BLUE,
     rl.RED,
@@ -179,7 +195,7 @@ update_player :: proc(player: ^Player, elapsed: f32, world: World, someone_has_w
             number_of_wins += 1
             someone_has_won^ = true
 
-            player.win_message = to_cstring(number_of_wins)  
+            player.win_message = fmt.ctprint(number_of_wins)  
         }
 
         if coord != prevCoord {
